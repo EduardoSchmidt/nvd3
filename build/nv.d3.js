@@ -1,4 +1,4 @@
-/* nvd3 version 1.7.1(https://github.com/novus/nvd3) 2015-04-11 */
+/* nvd3 version 1.7.1(https://github.com/novus/nvd3) 2015-05-21 */
 (function(){
 
 // set up main nv object on window
@@ -6467,15 +6467,17 @@ nv.models.multiBar = function() {
                         e: d3.event
                     });
                 })
-                .on('click', function(d,i) {
+                  .on('click', function(d,i) {
+                    var element = this
                     dispatch.elementClick({
-                        value: getY(d,i),
-                        point: d,
-                        series: data[d.series],
-                        pos: [x(getX(d,i)) + (x.rangeBand() * (stacked ? data.length / 2 : d.series + .5) / data.length), y(getY(d,i) + (stacked ? d.y0 : 0))],  // TODO: Figure out why the value appears to be shifted
-                        pointIndex: i,
-                        seriesIndex: d.series,
-                        e: d3.event
+                      value: getY(d,i),
+                      point: d,
+                      series: data[d.series],
+                      pos: [x(getX(d,i)) + (x.rangeBand() * (stacked ? data.length / 2 : d.series + .5) / data.length), y(getY(d,i) + (stacked ? d.y0 : 0))],  // TODO: Figure out why the value appears to be shifted
+                      pointIndex: i,
+                      seriesIndex: d.series,
+                      e: d3.event,
+                      element: element
                     });
                     d3.event.stopPropagation();
                 })
@@ -6703,6 +6705,30 @@ nv.models.multiBarChart = function() {
         }
     };
 
+    var wrapLabels = function wrap(text, width) {
+      text.each(function() {
+        var text = d3.select(this),
+            words = text.text().split(/\s+/).reverse(),
+            word,
+            line = [],
+            lineNumber = 0,
+            lineHeight = 1.1, // ems
+            y = text.attr("y"),
+            dy = parseFloat(text.attr("dy")),
+            tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node().getComputedTextLength() > width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+          }
+        }
+      });
+    };
+
     function chart(selection) {
         renderWatch.reset();
         renderWatch.models(multibar);
@@ -6725,6 +6751,10 @@ nv.models.multiBarChart = function() {
                     container.transition()
                         .duration(duration)
                         .call(chart);
+                container
+                  .select(".nv-x.nv-axis")
+                  .selectAll(".tick text")
+                  .call(wrapLabels, chart.xAxis.rangeBand()*2)
             };
             chart.container = this;
 
